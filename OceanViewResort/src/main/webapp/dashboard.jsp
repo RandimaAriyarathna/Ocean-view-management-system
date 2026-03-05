@@ -51,33 +51,19 @@
         }
     }
     
-    // ============ FIXED: Calculate counts using session check-outs ============
+    // Calculate counts
     int totalReservations = allReservations.size();
     int upcomingCount = 0;
     int activeCount = 0;
     int completedCount = 0;
-    int overdueCount = 0;
     
     for (Reservation r : allReservations) {
-        // Check if this reservation has been checked out
-        boolean isCheckedOut = checkOuts.containsKey(r.getReservationNumber());
-        
-        if (isCheckedOut) {
-            // Guest has physically left - COMPLETED
-            completedCount++;
-        }
-        else if (today.isBefore(r.getCheckIn())) {
-            // Future booking - UPCOMING
+        if (today.isBefore(r.getCheckIn())) {
             upcomingCount++;
-        }
-        else if (!today.isBefore(r.getCheckIn()) && !today.isAfter(r.getCheckOut())) {
-            // Currently within stay dates and not checked out - ACTIVE
+        } else if (!today.isBefore(r.getCheckIn()) && !today.isAfter(r.getCheckOut())) {
             activeCount++;
-        }
-        else {
-            // Past check-out date but not checked out - OVERDUE
-            activeCount++; // Still counts as an active stay because guest is still in hotel
-            overdueCount++;
+        } else {
+            completedCount++;
         }
     }
     
@@ -444,13 +430,6 @@
         .status-upcoming { background: #fff3cd; color: #856404; }
         .status-active { background: #d4edda; color: #155724; }
         .status-completed { background: #f8d7da; color: #721c24; }
-        .status-overdue { background: #f8d7da; color: #721c24; animation: pulse 2s infinite; }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.8; box-shadow: 0 0 5px rgba(220,53,69,0.5); }
-            100% { opacity: 1; }
-        }
 
         .view-all-link {
             display: block;
@@ -785,18 +764,6 @@
                     </div>
                 </div>
                 
-                <%--
-<div class="stat-card">
-    <div class="stat-info">
-        <h3><%= overdueCount %></h3>
-        <p>Overdue Stays</p>
-    </div>
-    <div class="stat-icon bg-danger">
-        <i class="fas fa-exclamation-triangle"></i>
-    </div>
-</div>
---%>
-                
                 <div class="stat-card">
                     <div class="stat-info">
                         <h3><%= occupiedRooms %>/<%= totalRooms %></h3>
@@ -925,23 +892,9 @@
                             </tr>
                         <% } else { %>
                             <% for(Reservation r : recentReservations) { 
-                                boolean isCheckedOut = checkOuts.containsKey(r.getReservationNumber());
-                                String status;
-                                String statusClass;
-                                
-                                if (isCheckedOut) {
-                                    status = "COMPLETED";
-                                    statusClass = "status-completed";
-                                } else if (today.isBefore(r.getCheckIn())) {
-                                    status = "UPCOMING";
-                                    statusClass = "status-upcoming";
-                                } else if (!today.isBefore(r.getCheckIn()) && !today.isAfter(r.getCheckOut())) {
-                                    status = "ACTIVE";
-                                    statusClass = "status-active";
-                                } else {
-                                    status = "OVERDUE";
-                                    statusClass = "status-overdue";
-                                }
+                                String status = r.calculateStatus();
+                                String statusClass = status.equals("UPCOMING") ? "status-upcoming" : 
+                                                   status.equals("ACTIVE") ? "status-active" : "status-completed";
                             %>
                             <tr onclick="window.location.href='view-reservation?number=<%= r.getReservationNumber() %>'">
                                 <td><strong><%= r.getReservationNumber() %></strong></td>

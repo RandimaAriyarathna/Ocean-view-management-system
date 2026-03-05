@@ -19,7 +19,7 @@
     <title>New Reservation - Ocean View Resort</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* ============ GLOBAL STYLES (MATCHING DASHBOARD) ============ */
+        
         * {
             margin: 0;
             padding: 0;

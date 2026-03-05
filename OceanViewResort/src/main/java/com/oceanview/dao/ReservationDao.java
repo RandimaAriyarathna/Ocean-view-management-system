@@ -9,7 +9,7 @@ import com.oceanview.model.Guest;
 
 public class ReservationDao {
     
-    // ============ ADD RESERVATION WITH GUEST ID (REMOVED STATUS) ============
+    // ============ ADD RESERVATION WITH GUEST ID ============
     public boolean addReservation(Reservation reservation, int guestId) {
         String sql = "INSERT INTO reservations (reservation_number, guest_id, room_type, " +
                      "check_in, check_out, room_number) VALUES (?, ?, ?, ?, ?, ?)";
@@ -50,63 +50,80 @@ public class ReservationDao {
         }
     }
     
-    // ============ CHECK IF ROOM IS AVAILABLE FOR DATES ============
+ // ============ CHECK IF ROOM IS AVAILABLE FOR DATES ============
     public boolean isRoomAvailable(String roomNumber, LocalDate checkIn, LocalDate checkOut) {
+
         String sql = "SELECT COUNT(*) FROM reservations " +
                      "WHERE room_number = ? " +
-                     "AND ((check_in < ? AND check_out > ?) " + // Existing reservation overlaps
-                     "OR (check_in >= ? AND check_in < ?))";    // Check-in during new reservation
-        
+                     "AND check_in < ? " +
+                     "AND check_out > ?";
+
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            
+
             ps.setString(1, roomNumber);
             ps.setDate(2, Date.valueOf(checkOut));
             ps.setDate(3, Date.valueOf(checkIn));
-            ps.setDate(4, Date.valueOf(checkIn));
-            ps.setDate(5, Date.valueOf(checkOut));
-            
+
             ResultSet rs = ps.executeQuery();
+
             if (rs.next()) {
                 int count = rs.getInt(1);
-                System.out.println("🔍 Room " + roomNumber + " overlapping reservations count: " + count);
-                return count == 0; // Available if no overlapping reservations
+
+                System.out.println("🔍 Room " + roomNumber + " overlapping reservations: " + count);
+
+                return count == 0; // If 0 -> room is available
             }
-            
+
         } catch (SQLException e) {
             System.err.println("Error checking room availability: " + e.getMessage());
             e.printStackTrace();
         }
+
         return false;
     }
     
-    // ============ GET AVAILABLE ROOMS FOR DATES ============
+ // ============ GET AVAILABLE ROOMS FOR DATES ============
     public List<String> getAvailableRooms(String roomType, LocalDate checkIn, LocalDate checkOut) {
+
         List<String> availableRooms = new ArrayList<>();
-        
-        // First, get all rooms of the requested type
-        String roomsSql = "SELECT room_number FROM rooms WHERE room_type = ? AND status IN ('AVAILABLE', 'BOOKED')";
-        
+
+        String roomsSql = "SELECT room_number FROM rooms WHERE room_type = ?";
+
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement roomsPs = conn.prepareStatement(roomsSql)) {
-            
-            roomsPs.setString(1, roomType);
-            ResultSet roomsRs = roomsPs.executeQuery();
-            
-            while (roomsRs.next()) {
-                String roomNumber = roomsRs.getString("room_number");
-                
-                // Check if this room is available for the dates
+             PreparedStatement ps = conn.prepareStatement(roomsSql)) {
+
+            ps.setString(1, roomType);
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+
+                String roomNumber = rs.getString("room_number");
+
+                System.out.println("Checking room: " + roomNumber);
+
                 if (isRoomAvailable(roomNumber, checkIn, checkOut)) {
+
                     availableRooms.add(roomNumber);
+
+                    System.out.println("✅ Room available: " + roomNumber);
+
+                } else {
+
+                    System.out.println("❌ Room not available: " + roomNumber);
+
                 }
             }
-            
+
+            System.out.println("📊 Total available rooms found: " + availableRooms.size());
+
         } catch (SQLException e) {
+
             System.err.println("Error getting available rooms: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         return availableRooms;
     }
     
